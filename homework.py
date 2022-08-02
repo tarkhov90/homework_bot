@@ -36,7 +36,7 @@ HOMEWORK_STATUSES = {
 
 
 def send_message(bot, message):
-    """"Отправляет сообщение в Telegram чат."""
+    """Отправляет сообщение в Telegram чат."""
     try:
         bot.send_message(TELEGRAM_CHAT_ID, message)
         logging.info('Сообщение отправлено!')
@@ -87,8 +87,9 @@ def check_response(response):
 
 
 def parse_status(homework):
-    """Извлекает из информации о конкретной
-    домашней работе статус этой работы."""
+    """Извлекает из информации о конкретной.
+    домашней работе статус этой работы.
+    """
     homework_status = homework.get('status')
     homework_name = homework.get('homework_name')
     try:
