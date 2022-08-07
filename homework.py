@@ -80,21 +80,17 @@ def check_response(response):
         logging.debug('Нет новых данных по ключам'
                       '<homeworks> или <current_date>')
         raise NotKeysError
-
-    if isinstance(homeworks[0], list):
-        logging.debug('Ответ приходят в виде списка')
-        raise TypeListError
     return homeworks
 
 
-def parse_status(homework):
+def parse_status(homeworks):
     """Извлекает из информации о конкретной.
     домашней работе статус этой работы.
     """
-    if 'homework_name' not in homework:
+    if 'homework_name' not in homeworks:
         message = 'Нет ключа homework_name'
-    homework_status = homework.get('status')
-    homework_name = homework.get('homework_name')
+    homework_status = homeworks.get('status')
+    homework_name = homeworks.get('homework_name')
     try:
         verdict = HOMEWORK_STATUSES[homework_status]
         return f'Изменился статус проверки работы "{homework_name}". {verdict}'
@@ -132,17 +128,18 @@ def main():
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
     current_timestamp = int(time.time() - MONTH_AGO)
     last_message = ''
-    last_homework = 0
+    last_homework = []
 
     while True:
         try:
             response = get_api_answer(current_timestamp)
-            homework = check_response(response)
-            if homework != last_homework:
-                last_homework = homework
-                message = parse_status(homework[0])
+            homeworks = check_response(response)
+            if homeworks != last_homework:
+                last_homework = homeworks
+                message = parse_status(homeworks[0])
                 send_message(bot, message)
             current_timestamp = response.get('current_date')
+            last_message = None
 
         except NotForSendingError as error:
             logging.debug(f'Сбой в работе программы: {error}')
