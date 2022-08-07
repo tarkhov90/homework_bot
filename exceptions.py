@@ -25,10 +25,3 @@ class TypeListError(NotForSendingError):
         super().__init__(
             'Ответ приходят в виде списка'
         )
-
-
-class UndocumentedStatusHomework(NotForSendingError):
-    def __init__(self):
-        super().__init__(
-            'Недокументированный статус домашней работы'
-        )

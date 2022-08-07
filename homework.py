@@ -4,7 +4,7 @@ import requests
 import telegram
 import time
 import logging
-import datetime
+import json
 
 from http import HTTPStatus
 from dotenv import load_dotenv
@@ -12,7 +12,6 @@ from exceptions import (ResponseStatusAPINot200,
                         NotSendingMessageError,
                         NotKeysError,
                         TypeListError,
-                        UndocumentedStatusHomework,
                         NotForSendingError)
 
 
@@ -23,6 +22,7 @@ PRACTICUM_TOKEN = os.getenv('PRACTICUM_TOKEN')
 TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
 TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
 
+MONTH_AGO = 2678400
 RETRY_TIME = 600
 ENDPOINT = 'https://practicum.yandex.ru/api/user_api/homework_statuses/'
 HEADERS = {'Authorization': f'OAuth {PRACTICUM_TOKEN}'}
@@ -62,9 +62,10 @@ def get_api_answer(current_timestamp):
                 f'API недоступен, код ошибки: {api_answer.status_code}'
             )
         return api_answer.json()
-    except Exception as error:
-        logging.error(f'Ошибка при запросе к API: {error}')
-        raise
+    except ConnectionError:
+        logging.critical('Ошибка соединения')
+    except json.decoder.JSONDecodeError:
+        logging.debug('Ошибка формирования в JSON')
 
 
 def check_response(response):
@@ -76,28 +77,30 @@ def check_response(response):
     homeworks = response.get('homeworks')
     current_date = response.get('current_date')
     if not (homeworks and current_date):
-        logging.debug('Нет данных по ключам <homeworks> или <current_date>')
+        logging.debug('Нет новых данных по ключам'
+                      '<homeworks> или <current_date>')
         raise NotKeysError
 
     if isinstance(homeworks[0], list):
         logging.debug('Ответ приходят в виде списка')
         raise TypeListError
-    else:
-        return homeworks
+    return homeworks
 
 
 def parse_status(homework):
     """Извлекает из информации о конкретной.
     домашней работе статус этой работы.
     """
+    if 'homework_name' not in homework:
+        message = 'Нет ключа homework_name'
     homework_status = homework.get('status')
     homework_name = homework.get('homework_name')
     try:
         verdict = HOMEWORK_STATUSES[homework_status]
         return f'Изменился статус проверки работы "{homework_name}". {verdict}'
-    except UndocumentedStatusHomework:
-        logging.debug('Недокументированный статус домашней работы')
-        raise UndocumentedStatusHomework
+    except KeyError:
+        logging.error(message)
+        raise KeyError(message)
 
 
 def check_tokens():
@@ -127,31 +130,19 @@ def main():
         raise KeyError('Нет нужных токенов')
 
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
-    from_date = 1656615600
-    current_timestamp = int(time.time() - from_date)
+    current_timestamp = int(time.time() - MONTH_AGO)
     last_message = ''
+    last_homework = 0
 
     while True:
         try:
             response = get_api_answer(current_timestamp)
             homework = check_response(response)
-            message = parse_status(homework[0])
-            if last_message != message:
+            if homework != last_homework:
+                last_homework = homework
+                message = parse_status(homework[0])
                 send_message(bot, message)
-            else:
-                logging.debug('Статус не изменился')
-            last_message = message
-
-            date_updated = (
-                homework[0].
-                get('date_updated').
-                replace('T', ' ').
-                replace('Z', '')
-            )
-            date_updated_datetime = (
-                datetime.datetime.fromisoformat(date_updated)
-            )
-            current_timestamp = int(date_updated_datetime.timestamp())
+            current_timestamp = response.get('current_date')
 
         except NotForSendingError as error:
             logging.debug(f'Сбой в работе программы: {error}')
