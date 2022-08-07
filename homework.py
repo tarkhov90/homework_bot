@@ -11,6 +11,7 @@ from dotenv import load_dotenv
 from exceptions import (ResponseStatusAPINot200,
                         NotSendingMessageError,
                         NotKeysError,
+                        TypeListError,
                         NotForSendingError)
 
 
@@ -79,6 +80,10 @@ def check_response(response):
         logging.debug('Нет новых данных по ключам'
                       '<homeworks> или <current_date>')
         raise NotKeysError
+
+    if isinstance(homeworks[0], list):
+        logging.debug('Ответ приходят в виде списка')
+        raise TypeListError
     return homeworks
 
 

@@ -18,3 +18,10 @@ class NotKeysError(NotForSendingError):
         super().__init__(
             'Нет данных по ключам <homeworks> или <current_date>'
         )
+
+
+class TypeListError(NotForSendingError):
+    def __init__(self):
+        super().__init__(
+            'Ответ приходят в виде списка'
+        )
