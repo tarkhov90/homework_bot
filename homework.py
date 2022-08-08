@@ -81,8 +81,8 @@ def check_response(response):
                       '<homeworks> или <current_date>')
         raise NotKeysError
 
-    if isinstance(homeworks[0], list):
-        logging.debug('Ответ приходят в виде списка')
+    if not isinstance(response['homeworks'], list):
+        logging.debug('Под ключом <homeworks> ответ приходят не в виде списка')
         raise TypeListError
     return homeworks
 
@@ -132,18 +132,16 @@ def main():
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
     current_timestamp = int(time.time() - MONTH_AGO)
     last_message = ''
-    last_homework = []
 
     while True:
         try:
             response = get_api_answer(current_timestamp)
             homeworks = check_response(response)
-            if homeworks != last_homework:
-                last_homework = homeworks
+            if len(homeworks) > 0:
                 message = parse_status(homeworks[0])
                 send_message(bot, message)
             current_timestamp = response.get('current_date')
-            last_message = None
+            last_message = ''
 
         except NotForSendingError as error:
             logging.debug(f'Сбой в работе программы: {error}')
