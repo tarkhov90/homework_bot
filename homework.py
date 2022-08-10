@@ -81,7 +81,7 @@ def check_response(response):
                       '<homeworks> или <current_date>')
         raise NotKeysError
 
-    if not isinstance(response['homeworks'], list):
+    if not isinstance(homeworks, list):
         logging.debug('Под ключом <homeworks> ответ приходят не в виде списка')
         raise TypeListError
     return homeworks
